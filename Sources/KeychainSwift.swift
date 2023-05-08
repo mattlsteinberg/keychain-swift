@@ -241,9 +241,7 @@ open class KeychainSwift {
   public var allKeys: [String] {
     var query: [String: Any] = [
       KeychainSwiftConstants.klass : kSecClassGenericPassword,
-      KeychainSwiftConstants.returnData : true,
       KeychainSwiftConstants.returnAttributes: true,
-      KeychainSwiftConstants.returnReference: true,
       KeychainSwiftConstants.matchLimit: KeychainSwiftConstants.secMatchLimitAll
     ]
   
