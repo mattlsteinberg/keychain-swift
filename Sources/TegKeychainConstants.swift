@@ -12,6 +12,9 @@ public struct KeychainSwiftConstants {
    
    */
   public static var accessible: String { return toString(kSecAttrAccessible) }
+
+  /// Used for specifying an identifier for the app or bundle that is using the Keychain.
+  public static var attrService: String { return toString(kSecAttrService) }
   
   /// Used for specifying a String key when setting/getting a Keychain value.
   public static var attrAccount: String { return toString(kSecAttrAccount) }
