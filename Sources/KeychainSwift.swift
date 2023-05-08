@@ -318,7 +318,10 @@ open class KeychainSwift {
     lock.lock()
     defer { lock.unlock() }
     
-    var query: [String: Any] = [ kSecClass as String : kSecClassGenericPassword ]
+    var query: [String: Any] = [
+      KeychainSwiftConstants.klass      : kSecClassGenericPassword,
+      KeychainSwiftConstants.matchLimit	: KeychainSwiftConstants.secMatchLimitAll
+    ]
     query = addServiceIdentifier(query)
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: false)
