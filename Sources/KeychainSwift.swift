@@ -244,7 +244,7 @@ open class KeychainSwift {
       KeychainSwiftConstants.returnAttributes: true,
       KeychainSwiftConstants.matchLimit: KeychainSwiftConstants.secMatchLimitAll
     ]
-  
+
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: false)
 
@@ -253,13 +253,16 @@ open class KeychainSwift {
     let lastResultCode = withUnsafeMutablePointer(to: &result) {
       SecItemCopyMatching(query as CFDictionary, UnsafeMutablePointer($0))
     }
-    
-    if lastResultCode == noErr {
-      return (result as? [[String: Any]])?.compactMap {
-        $0[KeychainSwiftConstants.attrAccount] as? String } ?? []
+
+    guard lastResultCode == noErr,
+          let resultListOfDicts = result as? [[String: Any]]
+    else {
+      return []
     }
-    
-    return []
+
+    return resultListOfDicts.compactMap {
+      $0[KeychainSwiftConstants.attrAccount] as? String
+    }
   }
     
   /**
