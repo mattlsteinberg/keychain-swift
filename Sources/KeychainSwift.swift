@@ -8,8 +8,6 @@ A collection of helper functions for saving text and data in the keychain.
 */
 open class KeychainSwift {
 
-  private static let defaultServiceIdentifier: String = Bundle.main.bundleIdentifier ?? Bundle.main.bundlePath
-
   var lastQueryParameters: [String: Any]? // Used by the unit tests
 
   /// Contains result code from the last operation. Value is noErr (0) for a successful result.
@@ -30,7 +28,7 @@ open class KeychainSwift {
    Specify a service name that will be used to limit access of keychain items to the bundle this instance is part of.
 
    */
-  open var serviceIdentifier: String
+  open var serviceIdentifier: String?
 
   /**
    
@@ -52,9 +50,12 @@ open class KeychainSwift {
   - parameter serviceIdentifier: A string that identifies the service. By default, it uses the bundle identifier or bundle path of the main bundle.
 
   */
-  public init(keyPrefix: String = "", serviceIdentifier: String? = nil) {
+  public init(
+    keyPrefix: String = "",
+    serviceIdentifier: String? = Bundle.main.bundleIdentifier ?? Bundle.main.bundlePath
+  ) {
     self.keyPrefix = keyPrefix
-    self.serviceIdentifier = serviceIdentifier ?? Self.defaultServiceIdentifier
+    self.serviceIdentifier = serviceIdentifier
   }
   
   /**
@@ -348,6 +349,7 @@ open class KeychainSwift {
 
    */
   func addServiceIdentifier(_ items: [String: Any]) -> [String: Any] {
+    guard let serviceIdentifier else { return items }
     var result: [String: Any] = items
     result[KeychainSwiftConstants.attrService] = serviceIdentifier
     return result
