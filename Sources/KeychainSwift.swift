@@ -7,14 +7,16 @@ A collection of helper functions for saving text and data in the keychain.
 
 */
 open class KeychainSwift {
-  
+
+  private static let defaultServiceIdentifier: String = Bundle.main.bundleIdentifier ?? Bundle.main.bundlePath
+
   var lastQueryParameters: [String: Any]? // Used by the unit tests
-  
+
   /// Contains result code from the last operation. Value is noErr (0) for a successful result.
   open var lastResultCode: OSStatus = noErr
 
-  var keyPrefix = "" // Can be useful in test.
-  
+  var keyPrefix: String // Can be useful in test.
+
   /**
 
   Specify an access group that will be used to access keychain items. Access groups can be used to share keychain items between applications. When access group value is nil all application access groups are being accessed. Access group name is used by all functions: set, get, delete and clear.
@@ -23,6 +25,13 @@ open class KeychainSwift {
   open var accessGroup: String?
   
   
+  /**
+
+   Specify a service name that will be used to limit access of keychain items to the bundle this instance is part of.
+
+   */
+  open var serviceIdentifier: String
+
   /**
    
   Specifies whether the items can be synchronized with other devices through iCloud. Setting this property to true will
@@ -35,17 +44,17 @@ open class KeychainSwift {
 
   private let lock = NSLock()
 
-  
-  /// Instantiate a KeychainSwift object
-  public init() { }
-  
   /**
-  
+
+   Instantiate a KeychainSwift object
+
   - parameter keyPrefix: a prefix that is added before the key in get/set methods. Note that `clear` method still clears everything from the Keychain.
+  - parameter serviceIdentifier: A string that identifies the service. By default, it uses the bundle identifier or bundle path of the main bundle.
 
   */
-  public init(keyPrefix: String) {
+  public init(keyPrefix: String = "", serviceIdentifier: String? = nil) {
     self.keyPrefix = keyPrefix
+    self.serviceIdentifier = serviceIdentifier ?? Self.defaultServiceIdentifier
   }
   
   /**
@@ -103,6 +112,7 @@ open class KeychainSwift {
       KeychainSwiftConstants.accessible  : accessible
     ]
       
+    query = addServiceIdentifier(query)
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: true)
     lastQueryParameters = query
@@ -183,6 +193,7 @@ open class KeychainSwift {
       query[KeychainSwiftConstants.returnData] =  kCFBooleanTrue
     }
     
+    query = addServiceIdentifier(query)
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: false)
     lastQueryParameters = query
@@ -241,12 +252,11 @@ open class KeychainSwift {
   public var allKeys: [String] {
     var query: [String: Any] = [
       KeychainSwiftConstants.klass : kSecClassGenericPassword,
-      KeychainSwiftConstants.returnData : true,
       KeychainSwiftConstants.returnAttributes: true,
-      KeychainSwiftConstants.returnReference: true,
       KeychainSwiftConstants.matchLimit: KeychainSwiftConstants.secMatchLimitAll
     ]
-  
+
+    query = addServiceIdentifier(query)
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: false)
 
@@ -255,13 +265,16 @@ open class KeychainSwift {
     let lastResultCode = withUnsafeMutablePointer(to: &result) {
       SecItemCopyMatching(query as CFDictionary, UnsafeMutablePointer($0))
     }
-    
-    if lastResultCode == noErr {
-      return (result as? [[String: Any]])?.compactMap {
-        $0[KeychainSwiftConstants.attrAccount] as? String } ?? []
+
+    guard lastResultCode == noErr,
+          let resultListOfDicts = result as? [[String: Any]]
+    else {
+      return []
     }
-    
-    return []
+
+    return resultListOfDicts.compactMap {
+      $0[KeychainSwiftConstants.attrAccount] as? String
+    }
   }
     
   /**
@@ -281,6 +294,7 @@ open class KeychainSwift {
       KeychainSwiftConstants.attrAccount : prefixedKey
     ]
     
+    query = addServiceIdentifier(query)
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: false)
     lastQueryParameters = query
@@ -304,7 +318,11 @@ open class KeychainSwift {
     lock.lock()
     defer { lock.unlock() }
     
-    var query: [String: Any] = [ kSecClass as String : kSecClassGenericPassword ]
+    var query: [String: Any] = [
+      KeychainSwiftConstants.klass      : kSecClassGenericPassword,
+      KeychainSwiftConstants.matchLimit	: KeychainSwiftConstants.secMatchLimitAll
+    ]
+    query = addServiceIdentifier(query)
     query = addAccessGroupWhenPresent(query)
     query = addSynchronizableIfRequired(query, addingItems: false)
     lastQueryParameters = query
@@ -319,6 +337,22 @@ open class KeychainSwift {
     return "\(keyPrefix)\(key)"
   }
   
+  /**
+
+   Adds the kSecAttrService key to the query to specify the service identifier of the bundle using the Keychain.
+   Scopes the result to that service.
+
+   - parameter items: The dictionary where the kSecAttrService key-value pair will be added.
+
+   - returns: the dictionary with the added kSecAttrService item.
+
+   */
+  func addServiceIdentifier(_ items: [String: Any]) -> [String: Any] {
+    var result: [String: Any] = items
+    result[KeychainSwiftConstants.attrService] = serviceIdentifier
+    return result
+  }
+
   func addAccessGroupWhenPresent(_ items: [String: Any]) -> [String: Any] {
     guard let accessGroup = accessGroup else { return items }
     

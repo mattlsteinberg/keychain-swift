@@ -18,6 +18,7 @@ class AllKeysTests: XCTestCase {
     super.setUp()
     
     obj = KeychainSwift()
+    obj.accessGroup = Bundle.main.bundleIdentifier
     obj.clear()
   }
   
