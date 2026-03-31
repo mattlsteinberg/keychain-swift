@@ -1,7 +1,7 @@
 import XCTest
 @testable import KeychainSwift
 
-class macOS_Tests: XCTestCase {
+class MacOSTests: XCTestCase {
         
     override func setUp() {
         super.setUp()
